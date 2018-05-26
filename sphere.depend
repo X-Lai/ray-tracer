@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1527345550 source:/home/laixin/codeblocks_projects/sphere/main.cpp
+	<iostream>
+	<cmath>
+	<stdlib.h>
+	<stdio.h>
+
