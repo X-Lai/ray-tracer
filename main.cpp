@@ -113,27 +113,15 @@ inline bool intersect(const ray &r, int &rect_id, int &sphere_id, double &t){
 
 int m = 16, maxdepth = 10;
 double cl = 0.8, eps = 1e-4;
-vec ca;
-
-int rect_id, sphere_id;
 
 vec radiance(ray r, unsigned short int *xi, int depth){
-
-    //printf("e3 %d\n", depth);
-    //getchar();
-
     if(depth > maxdepth) return vec();
-
     double t;
+    int rect_id, sphere_id;
     if(intersect(r, rect_id, sphere_id, t) == 0) return vec();
-
-    //printf("e4 %d\n",rect_id);
-    //printf("e8 %d\n",sphere_id);
-
     vec p = r.e + r.d * t;
     if(sphere_id != -1){
         Sphere& obj = spheres[sphere_id];
-
         vec n = (p - obj.p).norm();
         if(obj.refl == normal){
             return obj.e;
@@ -150,57 +138,34 @@ vec radiance(ray r, unsigned short int *xi, int depth){
     else {
         Rect obj = rects[rect_id];
         double phi = 2 * Pi * erand48(xi), dist_2 = erand48(xi), dist = sqrt(dist_2);
-
-        //printf("e5 %lf %lf %lf %lf\n", Pi, phi, dist_2, dist);
-
         double ul = sin(phi) * dist, vl = cos(phi) * dist, wl = sqrt(1 - dist_2);
         vec w = obj.n, u = cross(w.x == 0 ? vec(1,0,0): vec(0,1,0), w), v = cross(u,w);
-
-        /*printf("e7 %lf %lf %lf\n", w.x, w.y, w.z);
-        printf("e7 %lf %lf %lf\n", u.x, u.y, u.z);
-        printf("e7 %lf %lf %lf\n", v.x, v.y, v.z);*/
-
         ray R = ray(p, (w * wl + u * ul + v * vl).norm());
-
-        //printf("e6 %lf %lf %lf\n%lf %lf %lf\n", R.e.x, R.e.y, R.e.z, R.d.x, R.d.y, R.d.z);
-
         return obj.color.mult(radiance(R, xi, depth + 1));
     }
 }
 
 int main()
 {
-    int wi = 1024, h = 768, samps = 500;
-    vec *c = new vec[wi*h], e = vec(50,100-(1e-4),15), g = vec(0,-1,0), up = vec(0,0,1), s, p;
+    int wi = 1024, h = 768, samps = 5000;
+    vec *c = new vec[wi*h], e = vec(50,100-(1e-4),15), g = vec(0,-1,0), up = vec(0,0,1);
     vec w = (vec()-g).norm(), u = cross(up, w).norm(), v = cross(w, u);
-
-    double su, sv;
-
-    #pragma omp parallel for schedule(dynamic, 1) private(su, sv)
-
+    #pragma omp parallel for schedule(dynamic, 1) num_threads(45)
     for(int j = 0; j < h; j++){
         if(j % 100 == 0) printf("%lf%%\n", j * 1.0 / h);
         for(int i = 0; i < wi; i++){
-            su = 1 - (i + 0.5) * 2.0 / wi;
-            sv = 1.5 - (j + 0.5) * 2.0 / h;
-            s = e - w + u * su + v * sv;
+            double su = 1 - (i + 0.5) * 2.0 / wi;
+            double sv = 1.5 - (j + 0.5) * 2.0 / h;
+            vec s = e - w + u * su + v * sv;
             ray r = ray(e, (s-e).norm());
-            unsigned short int seed[3] = {0,0,(unsigned short)time(NULL)};
+            unsigned short int seed[3] = {0,0,(unsigned short)(j*j*j)};
             vec rad = vec();
-            for(int s = 0; s < samps; s++){
+            for(int samp = 0; samp < samps; samp++)
                 rad = rad + radiance(r, seed, 0);
-                //printf("e1 %lf %lf %lf\n", rad.x, rad.y, rad.z);
-                //getchar();
-            }
             rad = rad * (1.0 / samps);
-
-            //printf("e2 %lf %lf %lf\n", rad.x, rad.y, rad.z);
-            //getchar();
-
             c[j*wi+i] = c[j*wi+i] + vec(clamp(rad.x), clamp(rad.y), clamp(rad.z));
         }
     }
-
     FILE *fp = fopen("image1.ppm","w");
     fprintf(fp, "P3\n%d %d\n%d\n", wi, h, 255);
     for(int i=0; i<wi*h; i++){
