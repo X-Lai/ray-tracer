@@ -170,19 +170,13 @@ vec radiance(ray r, unsigned short int *xi, int depth){
 
 int main()
 {
-    int wi = 1024, h = 768, samps = 50;
+    int wi = 1024, h = 768, samps = 500;
     vec *c = new vec[wi*h], e = vec(50,100-(1e-4),15), g = vec(0,-1,0), up = vec(0,0,1), s, p;
     vec w = (vec()-g).norm(), u = cross(up, w).norm(), v = cross(w, u);
 
-    int rects_sum = sizeof(rects) / sizeof(Rect), spheres_sum = sizeof(spheres) / sizeof(Sphere);
-    for(int i = 0; i < rects_sum; i++)
-        ca = ca + rects[i].color;
-    for(int i = 0; i < spheres_sum; i++)
-        ca = ca + spheres[i].c;
-    ca = ca * (1.0 / (rects_sum + spheres_sum));
     double su, sv;
 
-    #pragma omp parallel for schedule(dynamic, 1)
+    #pragma omp parallel for schedule(dynamic, 1) private(su, sv)
 
     for(int j = 0; j < h; j++){
         if(j % 100 == 0) printf("%lf%%\n", j * 1.0 / h);
